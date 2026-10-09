@@ -1,4 +1,4 @@
-# Alleen voor het template; dit bestand staat niet in MANAGED_FILES.
+# Alleen voor deze repository.
 # Na het pushen van een versietag (bijv. v1.2.3) wordt de major-tag (v1)
 # naar dezelfde commit verplaatst. Documentrepos gebruiken @v1 en krijgen
 # daarmee automatisch alle niet-brekende updates.
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   move-major-tag:
-    if: ${{ github.repository == 'Geonovum/NL-ReSpec-template' }}
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

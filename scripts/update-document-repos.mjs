@@ -160,10 +160,10 @@ function configureGit(cwd) {
 async function createConfigMigrationPr(repo) {
   const prTitle = "chore: verplaats config.js naar js/config.js en update workflows";
   const prBody =
-    "Deze PR migreert de repository naar de actuele NL-ReSpec-template structuur.\n\n" +
+    "Deze PR migreert de repository naar de actuele NL-ReSpec-template structuur, met workflows uit NL-ReSpec-workflows.\n\n" +
     "Wijzigingen:\n" +
     "- verplaatst `config.js` naar `js/config.js`\n" +
-    "- voegt de beheerde GitHub Actions workflows uit de template toe of werkt ze bij\n" +
+    "- voegt de beheerde GitHub Actions workflows uit NL-ReSpec-workflows toe of werkt ze bij\n" +
     "- verwijdert de verouderde `.checks`-map en bijbehorende `.gitignore`-regels\n\n" +
     "Na merge wordt de repo bij een volgende run automatisch opgenomen in `repos.json`, omdat `js/config.js` dan aanwezig is.";
 
@@ -280,7 +280,7 @@ async function updateManagedFiles(repo) {
 
     runCommand(
       "git",
-      ["commit", "-m", "chore: update templatebestanden vanuit NL-ReSpec-template"],
+      ["commit", "-m", "chore: update workflows vanuit NL-ReSpec-workflows"],
       {
         cwd: repoDir,
         description: "git commit template-update",

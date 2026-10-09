@@ -101,7 +101,7 @@ jobs:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           ORG: ${{ matrix.org }}
           DRY_RUN: ${{ inputs.dry_run }}
-          TEMPLATE_GITHUB_DIR: ${{ github.workspace }}/.github
+          TEMPLATE_GITHUB_DIR: ${{ github.workspace }}/document-repo/.github
           SELF_OWNER: ${{ github.repository_owner }}
           SELF_REPO: ${{ github.event.repository.name }}
         run: >

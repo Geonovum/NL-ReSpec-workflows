@@ -1,26 +1,33 @@
-# Alleen voor het template; dit bestand staat niet in MANAGED_FILES.
+# Alleen voor deze repository: test de reusable workflows op het voorbeelddocument in de root.
 name: Template regression checks
 
 on:
+  # Een push naar main ververst snapshot.html, de basis voor de visuele vergelijking.
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # main.yml gebruikt @v1; hier wordt de build van deze branch zelf getest.
+  # Documentrepos gebruiken @v1; hier wordt de build van deze branch zelf getest.
   build:
-    if: ${{ github.repository == 'Geonovum/NL-ReSpec-template' }}
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
     permissions:
       contents: write
     uses: ./.github/workflows/build.yml
 
   visual-regression:
-    if: ${{ github.repository == 'Geonovum/NL-ReSpec-template' }}
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' && github.event_name != 'push' }}
     uses: ./.github/workflows/visual-regression-reusable.yml
     with:
       fail_on_difference: false
 
   mermaid-regression:
-    if: ${{ github.repository == 'Geonovum/NL-ReSpec-template' }}
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
     name: Mermaid structure, rendering and PDF
     runs-on: ubuntu-24.04
     permissions:

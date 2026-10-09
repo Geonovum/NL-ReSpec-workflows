@@ -7,8 +7,11 @@ import yaml
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 GITHUB_DIR = REPOSITORY_ROOT / ".github"
+# Bron van de aanroepende workflows die naar documentrepos worden uitgerold.
+CALLER_GITHUB_DIR = REPOSITORY_ROOT / "document-repo" / ".github"
 UPDATE_SCRIPT = REPOSITORY_ROOT / "scripts" / "update-document-repos.mjs"
-CENTRAL_PREFIX = "Geonovum/NL-ReSpec-template/.github/workflows/"
+ROLLOUT_WORKFLOW = GITHUB_DIR / "workflows" / "update-workflows.yml"
+CENTRAL_PREFIX = "Geonovum/NL-ReSpec-workflows/.github/workflows/"
 
 
 def string_list(source: str, name: str) -> list[str]:
@@ -16,9 +19,13 @@ def string_list(source: str, name: str) -> list[str]:
     return re.findall(r'"([^"]+)"', block)
 
 
-def workflow(name: str) -> dict:
+def workflow(name: str, github_dir: Path = GITHUB_DIR) -> dict:
     # PyYAML leest de sleutel "on" als True.
-    return yaml.safe_load((GITHUB_DIR / "workflows" / name).read_text(encoding="utf-8"))
+    return yaml.safe_load((github_dir / "workflows" / name).read_text(encoding="utf-8"))
+
+
+def caller(name: str) -> dict:
+    return workflow(name, CALLER_GITHUB_DIR)
 
 
 class CentralWorkflowTest(unittest.TestCase):
@@ -45,7 +52,7 @@ class CentralWorkflowTest(unittest.TestCase):
 
     def test_callers_use_central_reusable_workflows_on_the_major_tag(self) -> None:
         for name in self.managed:
-            jobs = workflow(Path(name).name)["jobs"]
+            jobs = caller(Path(name).name)["jobs"]
             for job_name, job in jobs.items():
                 uses = job.get("uses", "")
                 with self.subTest(file=name, job=job_name):
@@ -55,9 +62,18 @@ class CentralWorkflowTest(unittest.TestCase):
                     self.assertIn("workflow_call", target[True])
 
     def test_caller_grants_the_permissions_the_reusable_jobs_need(self) -> None:
-        jobs = workflow("main.yml")["jobs"]
+        jobs = caller("main.yml")["jobs"]
         self.assertEqual(jobs["build"]["permissions"], {"contents": "write"})
         self.assertEqual(jobs["publish"]["permissions"], {"contents": "write", "pull-requests": "write"})
+
+    def test_rollout_copies_callers_from_document_repo_directory(self) -> None:
+        for name in self.managed:
+            self.assertTrue((CALLER_GITHUB_DIR / name).is_file(), name)
+            # Aanroepende workflows draaien niet in deze repository zelf.
+            self.assertFalse((GITHUB_DIR / name).exists(), name)
+        steps = workflow("update-workflows.yml")["jobs"]["update"]["steps"]
+        env = next(step["env"] for step in steps if "TEMPLATE_GITHUB_DIR" in step.get("env", {}))
+        self.assertEqual(env["TEMPLATE_GITHUB_DIR"], "${{ github.workspace }}/document-repo/.github")
 
     def test_template_tests_its_own_build_workflow(self) -> None:
         jobs = workflow("template-regression.yml")["jobs"]

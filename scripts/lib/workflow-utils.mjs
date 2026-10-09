@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 
 const API_BASE_URL = "https://api.github.com";
-const USER_AGENT = "NL-ReSpec-template-workflows";
+const USER_AGENT = "NL-ReSpec-workflows";
 
 export function parseArgs(argv) {
   const args = {};

@@ -1,150 +1,44 @@
-## ReSpec template instructies
+# NL-ReSpec-workflows
 
-ReSpec is een tool om HTML- en PDF-documenten te genereren op basis van markdowncontent. Deze template helpt je bij het opstellen en publiceren van documenten volgens de Geonovum-standaard.
+Centrale GitHub Actions workflows voor ReSpec-documenten van Geonovum en
+BROprogramma. Documentrepositories (gemaakt met
+[NL-ReSpec-template](https://github.com/Geonovum/NL-ReSpec-template)) bevatten
+alleen twee kleine aanroepende workflows; de build-, controle- en
+publicatiestappen staan hier.
 
-De dynamische voorbeeldpagina van het template is [hier te bekijken](https://geonovum.github.io/NL-ReSpec-GN-template/).
+Deze repository is bedoeld voor beheerders. Uitleg voor auteurs staat in de
+README van [NL-ReSpec-template](https://github.com/Geonovum/NL-ReSpec-template).
 
----
+## Inhoud
 
-## Starten
+| Pad | Doel |
+| --- | --- |
+| `.github/workflows/build.yml` | Snapshot, Mermaid-normalisatie, PDF en controles (HTML, WCAG, links) |
+| `.github/workflows/publish.yml` | Publicatie naar docs.geostandaarden.nl |
+| `.github/workflows/visual-regression-reusable.yml` | Visuele vergelijking van snapshots |
+| `.github/workflows/normalize-mermaid-svg.mjs`, `pdf.js`, `.github/mermaid-svg/` | Hulpbestanden die `build.yml` zelf ophaalt |
+| `document-repo/.github/workflows/` | De aanroepende workflows (`main.yml`, `visual-regression.yml`) die naar documentrepos worden uitgerold |
+| `.github/workflows/update-workflows.yml`, `scripts/`, `.github/repos.json` | Uitrol naar documentrepos |
+| `.github/workflows/release-tag.yml` | Verplaatst de major-tag (`v1`) bij een nieuwe versietag |
+| `.github/workflows/template-regression.yml`, `tests/` | Regressietests van deze workflows |
+| `index.html`, `js/config.js`, `*.md`, `media/`, `snapshot.html` | Voorbeelddocument waarop de regressietests draaien |
 
-Gebruik de knop [*Gebruik deze template*](https://github.com/Geonovum/NL-ReSpec-template/generate?description=Geonovum+documenttemplate) om een nieuwe repository aan te maken:
+## Gebruik in een documentrepository
 
-* **Owner:** kies `Geonovum` als je daar rechten voor hebt.
-* **Visibility:** kies **Public**.
-
-> ℹ️ Na het aanmaken moet je **handmatig GitHub Pages activeren** in de instellingen van je nieuwe repository:
->
-> * Ga naar `Settings` → `Pages`
-> * Kies onder “Source” de branch `main` en map `/ (root)`
-
----
-
-## Gebruikersinstructie
-
-Voor het aanpassen van het document raden we aan om een IDE te gebruiken, zoals [Visual Studio Code](https://code.visualstudio.com/). Deze geeft een voorbeeldweergave van je markdown en helpt bij het beheren van je bestanden.
-
-### Aanpassen van content
-
-* Pas instellingen aan in de configuratiebestanden (`config.js`)
-* Voeg markdown-bestanden toe of wijzig bestaande bestanden
-
-### Configuratiebestanden
-
-* [`js/config.js`](js/config.js): bevat document-specifieke instellingen zoals titel, status en auteurs
-* [`organisation-config.js`](https://tools.geostandaarden.nl/respec/config/geonovum-config.js): bevat algemene informatie over de organisatie
-
-Beide bestanden worden gelinkt in de [`index.html`](index.html)
-
-### Content schrijven
-
-* Gebruik markdown of HTML
-* Splits content idealiter per hoofdstuk in losse bestanden
-* Voeg nieuwe secties toe aan de `index.html` via `data-include`:
-
-```html
-<section data-include-format="markdown" data-include="ch01.md" class="informative"></section>
-<section data-include-format="markdown" data-include="ch02.md"></section>
-```
-
-CSS-classes zijn ook bruikbaar in markdown via HTML:
-
-```html
-<div class="example">voorbeeld</div>
-```
-
-Meer info:
-* [Geonovum ReSpec handleiding](https://geonovum.github.io/handleiding-tooling/ReSpec/)
-* [ReSpec documentatie](https://respec.org/docs/#css-classes)
-
----
-
-## Automatische checks en build
-
-De GitHub Actions workflow draait automatisch bij iedere commit of bij een GitHub Release. Daarbij gebeuren de volgende stappen:
-
-1. HTML wordt gegenereerd met [ReSpec](https://respec.org/)
-2. (optioneel) PDF wordt gegenereerd — indien `alternateFormats` is ingesteld in `config.js`:
-
-```js
-alternateFormats: [
-  {
-    label: "pdf",
-    uri: "template.pdf",
-  },
-]
-```
-
-3. Automatische controles worden uitgevoerd:
-
-    * HTML-validatie
-    * WCAG-check (toegankelijkheid)
-    * Linkcheck (controleren van verwijzingen)
-
-De resultaten zijn zichtbaar in het tabblad **Actions** van je repository.
-
----
-
-## Publiceren van documenten
-
-Wanneer je document klaar is, publiceer je via **GitHub Releases**:
-
-### Controle vóór publiceren
-
-Controleer vóór het maken van een pre-release of release in **Actions** de
-`Main Workflow` van de commit die je wilt publiceren. De job
-`Snapshot + Checks` moet groen zijn en de samenvatting moet
-**“Publicatiegereed: ja”** tonen. Proof HTML en de Lychee-linkcontrole zijn
-blokkerend; bij **“Publicatiegereed: nee”** moet je de gemelde fouten eerst
-oplossen.
-
-### Pre-release (testomgeving)
-
-* Ga naar het tabblad **Releases** in je eigen repo
-* Klik op **“Create a new release”**
-* Geef een tag aan bij, Choose a tag (bijv. `v0.1.0`) en klik op **“Create new tag”**
-* **Vink aan:** “This is a pre-release” onderop deze pagina
-* Klik op **“Publish release”**
-
-💡 Dit publiceert je document automatisch op:
-https://test.docs.geostandaarden.nl/
-
-(De exacte URL wordt bepaald door waarden in `config.js`)
-
-### Release (productieomgeving)
-
-* Ga opnieuw naar **Releases**
-* Klik op **“Create a new release”**
-* Geef een tag aan bij, Choose a tag (bijv. `v0.1.0`) en klik op **“Create new tag”**
-* Laat “pre-release” uitgevinkt
-* Klik op **“Publish release”**
-
-💡 Dit maakt automatisch een **Pull Request** aan naar:
-[`Geonovum/docs.geostandaarden.nl`](https://github.com/Geonovum/docs.geostandaarden.nl/pulls)
-
-Na goedkeuring van de PR wordt het document gepubliceerd op:
-https://docs.geostandaarden.nl/
-
----
-
-## Centrale workflows en versies
-
-De build- en publicatiestappen staan alleen in deze template. Een
-documentrepository bevat uitsluitend kleine aanroepende workflows
-(`main.yml` en `visual-regression.yml`) die de centrale workflows gebruiken:
+Een documentrepository bevat alleen de bestanden uit
+[`document-repo/.github/workflows/`](document-repo/.github/workflows/), bijvoorbeeld:
 
 ```yaml
 jobs:
   build:
-    uses: Geonovum/NL-ReSpec-template/.github/workflows/build.yml@v1
+    uses: Geonovum/NL-ReSpec-workflows/.github/workflows/build.yml@v1
 ```
 
 Hulpbestanden zoals de Mermaid-normalisatie en `pdf.js` haalt de centrale
-workflow zelf op uit dezelfde versie van deze template. Een fix in de
-template bereikt dus alle documentrepositories zonder dat daar iets hoeft
-te veranderen.
+workflow zelf op uit dezelfde versie van deze repository. Een fix hier bereikt
+dus alle documentrepositories zonder dat daar iets hoeft te veranderen.
 
-### Versies
+## Versies
 
 * Elke workflowrelease krijgt een vaste tag volgens semver, bijv. `v1.0.1`.
 * De tag `v1` wijst altijd naar de nieuwste `v1.x.y`. De workflow
@@ -164,13 +58,22 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-Gebruik hiervoor een gewone tag en geen GitHub-release: een release in
-deze repository start ook de publicatieflow van het voorbeelddocument.
+## Testen
+
+Pull requests draaien **Template regression checks**: de build en de visuele
+vergelijking via de workflows van de eigen branch op het voorbeelddocument in
+de root, plus de Python-tests:
+
+```bash
+(cd .github/mermaid-svg && npm ci --ignore-scripts)
+python3 -m pip install PyYAML
+python3 -m unittest discover -s tests -v
+```
 
 ## Workflows updaten in document-repos
 
 De aanroepende workflows in alle document-repositories kunnen centraal
-bijgewerkt worden vanuit deze template via de workflow
+bijgewerkt worden vanuit deze repository via de workflow
 **"Update workflows in document repos"**.
 
 ### Repos bijhouden (automatisch)
@@ -183,7 +86,7 @@ automatisch bijgewerkt:
 * Repos met `js/config.js` krijgen ook `respecBuildUrl` en
   `respecVersion` mee op basis van `index.html` en `snapshot.html`
 * Repos die **gearchiveerd of verwijderd** zijn worden uit de lijst verwijderd
-* De bijgewerkte `repos.json` wordt terug gecommit naar deze template repo
+* De bijgewerkte `repos.json` wordt terug gecommit naar deze repository
 
 Wil je een repo **uitsluiten** van updates, zet dan
 `"updateAllow": false` in `repos.json`. Die repo wordt dan nooit meer
@@ -191,14 +94,14 @@ aangeraakt, ook niet bij toekomstige runs.
 
 Repos met een `config.js` in de root (maar nog niet in `js/`) krijgen een
 aparte PR om dit bestand te verplaatsen naar `js/config.js` en meteen de
-beheerde `.github`-bestanden uit deze template mee te nemen. Zo'n repo
+beheerde `.github`-bestanden uit deze repository mee te nemen. Zo'n repo
 wordt pas bij een volgende run automatisch aan `repos.json` toegevoegd,
 nadat de migratie-PR is gemerged.
 
 ### Handmatig triggeren
 
 Ga naar
-[Actions → Update workflows in document repos](https://github.com/Geonovum/NL-ReSpec-template/actions/workflows/update-workflows.yml)
+[Actions → Update workflows in document repos](https://github.com/Geonovum/NL-ReSpec-workflows/actions/workflows/update-workflows.yml)
 en klik op **"Run workflow"**.
 
 * **Dry run** aanvinken om te zien welke repos bijgewerkt zouden worden,
@@ -206,11 +109,12 @@ en klik op **"Run workflow"**.
 
 ### Wat wordt bijgewerkt?
 
-Alleen een vaste set templatebestanden wordt bijgewerkt. Bestaande andere
+Alleen een vaste set bestanden wordt bijgewerkt. Bestaande andere
 bestanden onder `.github/`, zoals extra workflows of templates, blijven
 onaangeraakt.
 
-De volgende bestanden worden bijgewerkt:
+De volgende bestanden worden bijgewerkt, met als bron
+[`document-repo/.github/workflows/`](document-repo/.github/workflows/):
 
 * `.github/workflows/main.yml`
 * `.github/workflows/visual-regression.yml`

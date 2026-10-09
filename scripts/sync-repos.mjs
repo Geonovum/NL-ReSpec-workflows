@@ -6,7 +6,6 @@ import {
   logSection,
   parseArgs,
   readJson,
-  readTextIfExists,
   requireArg,
   writeJson,
 } from "./lib/workflow-utils.mjs";
@@ -61,18 +60,6 @@ async function getRemoteRepoMetadata(client, org, repo) {
   };
 }
 
-async function getLocalRepoMetadata() {
-  const [indexHtml, snapshotHtml] = await Promise.all([
-    readTextIfExists("index.html"),
-    readTextIfExists("snapshot.html"),
-  ]);
-
-  return {
-    respecBuildUrl: extractRespecBuildUrl(indexHtml),
-    respecVersion: extractRespecVersion(snapshotHtml),
-  };
-}
-
 async function scanOrg(org, token) {
   if (!token) {
     console.log(`⚠️  Geen token voor ${org}, sync overgeslagen.`);
@@ -91,8 +78,10 @@ async function scanOrg(org, token) {
       continue;
     }
 
+    // Deze workflows-repo heeft een voorbeelddocument (js/config.js) voor de
+    // regressietests, maar is zelf geen documentrepo.
     if (org === selfOwner && repo === selfRepo) {
-      console.log(`⏩ Template repo overgeslagen: ${org}/${repo}`);
+      console.log(`⏩ Workflows-repo overgeslagen: ${org}/${repo}`);
       continue;
     }
 
@@ -111,25 +100,7 @@ async function scanOrg(org, token) {
     upsertRepoMetadata(repos, repo, true, metadata);
   }
 
-  if (org === selfOwner) {
-    if (!hasOwn(repos, selfRepo)) {
-      console.log(`➕ Template repo toegevoegd met updateAllow: false: ${org}/${selfRepo}`);
-    }
-
-    const metadata = await getLocalRepoMetadata();
-    repos[selfRepo] = {
-      ...(repos[selfRepo] ?? {}),
-      updateAllow: false,
-      respecBuildUrl: metadata.respecBuildUrl,
-      respecVersion: metadata.respecVersion,
-    };
-  }
-
   for (const repo of Object.keys(repos)) {
-    if (org === selfOwner && repo === selfRepo) {
-      continue;
-    }
-
     if (!activeRepos.has(repo)) {
       console.log(`🗑️  Verwijderd (niet meer actief): ${org}/${repo}`);
       delete repos[repo];

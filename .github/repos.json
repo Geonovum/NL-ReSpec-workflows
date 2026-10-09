@@ -202,7 +202,7 @@
         "respecVersion": "35.8.0"
       },
       "NL-ReSpec-template": {
-        "updateAllow": false,
+        "updateAllow": true,
         "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
         "respecVersion": "37.2.0"
       },
