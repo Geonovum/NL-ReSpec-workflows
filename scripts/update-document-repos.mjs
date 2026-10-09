@@ -10,6 +10,7 @@ import {
   runCommand,
 } from "./lib/workflow-utils.mjs";
 import { migrateChecksDirectory } from "./lib/repository-migration.mjs";
+import { knownTemplateBlobs, removeTemplateLeftovers } from "./lib/template-leftovers.mjs";
 
 // Documentrepos bevatten alleen de aanroepende workflows; build en publicatie
 // worden centraal via `uses: ...@v1` uit dit template gebruikt.
@@ -49,6 +50,14 @@ const reposToUpdate = Object.entries(reposConfig)
   .map(([repo]) => repo);
 
 const configStateCache = new Map();
+
+// Exacte kopieën van template-tooling worden herkend aan de geschiedenis van
+// deze repository (de geïmporteerde geschiedenis van NL-ReSpec-template).
+const toolingRepoDir = runCommand("git", ["rev-parse", "--show-toplevel"], {
+  cwd: templateGithubDir,
+  description: "git rev-parse --show-toplevel",
+}).stdout.trim();
+const templateBlobs = knownTemplateBlobs(toolingRepoDir);
 
 function remoteUrl(owner, repo) {
   return `https://x-access-token:${encodeURIComponent(token)}@github.com/${owner}/${repo}.git`;
@@ -191,6 +200,7 @@ async function createConfigMigrationPr(repo) {
     const stagedPaths = copyManagedFiles(repoDir);
     const removedPaths = removeDeprecatedManagedFiles(repoDir);
     const migratedPaths = migrateChecksDirectory(repoDir);
+    const leftoverPaths = removeTemplateLeftovers(repoDir, templateBlobs);
     runCommand(
       "git",
       [
@@ -202,6 +212,7 @@ async function createConfigMigrationPr(repo) {
         ...stagedPaths,
         ...removedPaths,
         ...migratedPaths,
+        ...leftoverPaths,
       ],
       {
         cwd: repoDir,
@@ -260,7 +271,8 @@ async function updateManagedFiles(repo) {
     const stagedPaths = copyManagedFiles(repoDir);
     const removedPaths = removeDeprecatedManagedFiles(repoDir);
     const migratedPaths = migrateChecksDirectory(repoDir);
-    runCommand("git", ["add", "-A", "--", ...stagedPaths, ...removedPaths, ...migratedPaths], {
+    const leftoverPaths = removeTemplateLeftovers(repoDir, templateBlobs);
+    runCommand("git", ["add", "-A", "--", ...stagedPaths, ...removedPaths, ...migratedPaths, ...leftoverPaths], {
       cwd: repoDir,
       description: "git add templatebestanden",
     });
