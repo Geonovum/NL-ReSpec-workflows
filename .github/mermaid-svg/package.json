@@ -1,0 +1,8 @@
+{
+  "name": "nl-respec-mermaid-svg-normalization",
+  "private": true,
+  "dependencies": {
+    "css-tree": "3.2.1",
+    "parse5": "8.0.1"
+  }
+}

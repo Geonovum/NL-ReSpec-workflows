@@ -1,0 +1,67 @@
+# Alleen voor deze repository: test de reusable workflows op het voorbeelddocument in de root.
+name: Template regression checks
+
+on:
+  # Een push naar main ververst snapshot.html, de basis voor de visuele vergelijking.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Documentrepos gebruiken @v1; hier wordt de build van deze branch zelf getest.
+  build:
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yml
+
+  visual-regression:
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' && github.event_name != 'push' }}
+    uses: ./.github/workflows/visual-regression-reusable.yml
+    with:
+      fail_on_difference: false
+
+  mermaid-regression:
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
+    name: Mermaid structure, rendering and PDF
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Install normalization dependencies
+        run: (cd .github/mermaid-svg && npm ci --ignore-scripts --no-audit --no-fund)
+      - name: Run all Python regression tests
+        run: |
+          python3 -m pip install PyYAML
+          python3 -m unittest discover -s tests -v
+      - name: Install rendering tools
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          mkdir -p "$RUNNER_TEMP/mermaid-test-tools"
+          cp tests/verify_mermaid_rendering.mjs "$RUNNER_TEMP/mermaid-test-tools/"
+          cd "$RUNNER_TEMP/mermaid-test-tools"
+          npm install --no-audit --no-fund @playwright/test pngjs puppeteer
+          npx playwright install --with-deps chromium
+      - name: Compare normalized diagrams on screen and in PDF
+        run: |
+          node "$RUNNER_TEMP/mermaid-test-tools/verify_mermaid_rendering.mjs" \
+            "$GITHUB_WORKSPACE" "$RUNNER_TEMP/mermaid-report"
+      - name: Upload Mermaid regression evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mermaid-regression-report
+          path: ${{ runner.temp }}/mermaid-report
+          if-no-files-found: warn
