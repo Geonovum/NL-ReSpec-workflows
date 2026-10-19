@@ -17,6 +17,7 @@ README van [NL-ReSpec-template](https://github.com/Geonovum/NL-ReSpec-template).
 | `.github/workflows/publish.yml` | Publicatie naar docs.geostandaarden.nl |
 | `.github/workflows/visual-regression-reusable.yml` | Visuele vergelijking van snapshots |
 | `.github/workflows/normalize-mermaid-svg.mjs`, `pdf.js`, `.github/mermaid-svg/` | Hulpbestanden die `build.yml` zelf ophaalt |
+| `.github/actions/validate-html`, `.github/actions/check-links` | HTML- en linkcontrole, gedeeld door `build.yml` en de PR-controle van docs.geostandaarden.nl; versies staan alleen hier |
 | `document-repo/.github/workflows/` | De aanroepende workflows (`main.yml`, `visual-regression.yml`) die naar documentrepos worden uitgerold |
 | `.github/workflows/update-workflows.yml`, `scripts/`, `.github/repos.json` | Uitrol naar documentrepos |
 | `.github/workflows/release-tag.yml` | Verplaatst de major-tag (`v1`) bij een nieuwe versietag |

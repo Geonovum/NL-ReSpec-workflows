@@ -11,18 +11,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Hulpbestanden (normalizer, pdf.js) komen uit dezelfde repository en ref
-      # als deze reusable workflow, zodat documentrepos ze niet zelf hoeven te bevatten.
+      # Hulpbestanden (normalizer, pdf.js, gedeelde controles) komen uit dezelfde
+      # repository en commit als deze reusable workflow, zodat documentrepos ze niet
+      # zelf hoeven te bevatten en workflow en hulpbestanden altijd bij elkaar passen.
       - name: Determine tooling ref
         id: tooling
         shell: bash
         env:
           WORKFLOW_REF: ${{ job.workflow_ref }}
+          WORKFLOW_REPOSITORY: ${{ job.workflow_repository }}
+          WORKFLOW_SHA: ${{ job.workflow_sha }}
         run: |
           set -euo pipefail
 
-          TOOLING_REPOSITORY="${WORKFLOW_REF%%/.github/workflows/*}"
-          TOOLING_REF="${WORKFLOW_REF##*@}"
+          TOOLING_REPOSITORY="${WORKFLOW_REPOSITORY:-${WORKFLOW_REF%%/.github/workflows/*}}"
+          TOOLING_REF="${WORKFLOW_SHA:-${WORKFLOW_REF##*@}}"
 
           if [[ -z "$TOOLING_REPOSITORY" || -z "$TOOLING_REF" ]]; then
             echo "::error title=Workflow ref ontbreekt::Kan job.workflow_ref niet parsen: $WORKFLOW_REF"
@@ -43,6 +46,7 @@ jobs:
           path: .nl-respec-tooling
           persist-credentials: false
           sparse-checkout: |
+            .github/actions
             .github/mermaid-svg
             .github/workflows
 
@@ -147,17 +151,13 @@ jobs:
             \( -name '*.respec.html' -o -name '*.respec.catalog.xhtml' \) \
             -delete
 
+      # Dezelfde controle (versie en opties) draait bij de PR-controle van
+      # docs.geostandaarden.nl; zie .github/actions/.
       - name: Validate publication HTML
         id: publication-html
-        uses: anishathalye/proof-html@f060b7619c2410bd85d970459a60ef431cf47ed5 # v2.2.5
+        uses: ./.nl-respec-tooling/.github/actions/validate-html
         with:
           directory: publication-validation
-          check_html: true
-          check_css: false
-          disable_external: true
-          check_external_hash: false
-          enforce_https: false
-          ignore_empty_alt: true
 
       - name: Check for alternateFormats via Node
         id: config
@@ -277,18 +277,12 @@ jobs:
       - name: Validate publication links
         id: publication-links
         if: ${{ !cancelled() }}
-        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        uses: ./.nl-respec-tooling/.github/actions/check-links
         with:
-          args: >-
-            --offline
-            --root-dir "${{ github.workspace }}/publication-validation"
-            './index.html'
-          fail: true
-          failIfEmpty: true
-          format: markdown
-          jobSummary: true
+          files: "'./index.html'"
+          root-dir: ${{ github.workspace }}/publication-validation
+          working-directory: ${{ github.workspace }}/publication-validation
           output: ${{ runner.temp }}/nl-respec-validation/link-check.txt
-          workingDirectory: ${{ github.workspace }}/publication-validation
 
       - name: Summarize publication preflight
         if: ${{ always() }}

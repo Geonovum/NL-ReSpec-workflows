@@ -1,0 +1,43 @@
+name: Check links
+description: >-
+  Offline linkcontrole met Lychee. Gedeeld door build.yml en de PR-controle
+  van docs.geostandaarden.nl, zodat beide dezelfde versie en dezelfde opties
+  gebruiken.
+
+inputs:
+  files:
+    description: De te controleren bestanden, als Lychee-argumenten (gequote).
+    required: true
+  root-dir:
+    description: Absolute map waartegen root-relatieve links worden opgelost.
+    required: true
+  remap:
+    description: Optionele Lychee-remap, bijv. "^https://example\.org file:///pad".
+    required: false
+    default: ""
+  working-directory:
+    description: Map waarin Lychee draait.
+    required: false
+    default: "."
+  output:
+    description: Pad voor het rapport.
+    required: false
+    default: lychee/out.md
+
+runs:
+  using: composite
+  steps:
+    - name: Check links
+      uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+      with:
+        args: >-
+          --offline
+          --root-dir "${{ inputs.root-dir }}"
+          ${{ inputs.remap != '' && format('--remap "{0}"', inputs.remap) || '' }}
+          ${{ inputs.files }}
+        fail: true
+        failIfEmpty: true
+        format: markdown
+        jobSummary: true
+        output: ${{ inputs.output }}
+        workingDirectory: ${{ inputs.working-directory }}

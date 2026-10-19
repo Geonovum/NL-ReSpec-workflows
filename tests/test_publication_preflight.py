@@ -161,14 +161,8 @@ class PublicationPreflightTest(unittest.TestCase):
 
         self.assertNotIn("continue-on-error", step)
         self.assertNotIn("if", step)
-        self.assertEqual(
-            step["with"]["directory"],
-            "publication-validation",
-        )
-        self.assertIs(step["with"]["check_html"], True)
-        self.assertIs(step["with"]["check_css"], False)
-        self.assertIs(step["with"]["disable_external"], True)
-        self.assertIs(step["with"]["ignore_empty_alt"], True)
+        self.assertEqual(step["uses"], "./.nl-respec-tooling/.github/actions/validate-html")
+        self.assertEqual(step["with"]["directory"], "publication-validation")
 
     def test_lychee_checks_only_generated_index_and_fails_on_errors(self) -> None:
         step = find_step("Validate publication links")
@@ -176,16 +170,22 @@ class PublicationPreflightTest(unittest.TestCase):
 
         self.assertNotIn("continue-on-error", step)
         self.assertEqual(step.get("if"), "${{ !cancelled() }}")
-        self.assertTrue(step["uses"].startswith("lycheeverse/lychee-action@"))
-        self.assertIs(step["with"]["fail"], True)
+        self.assertEqual(step["uses"], "./.nl-respec-tooling/.github/actions/check-links")
+        self.assertEqual(step["with"]["files"], "'./index.html'")
+        self.assertEqual(step["with"]["root-dir"], "${{ github.workspace }}/publication-validation")
         self.assertEqual(
-            step["with"]["workingDirectory"],
+            step["with"]["working-directory"],
             "${{ github.workspace }}/publication-validation",
         )
-        self.assertIn("--offline", step["with"]["args"])
-        self.assertIn("--root-dir", step["with"]["args"])
-        self.assertIn("./index.html", step["with"]["args"])
-        self.assertNotIn("./**/*.html", step["with"]["args"])
+
+    def test_tooling_checkout_contains_shared_actions_at_workflow_commit(self) -> None:
+        tooling = find_step("Determine tooling ref")
+        checkout = find_step("Checkout workflow tooling")
+
+        self.assertEqual(tooling["env"]["WORKFLOW_SHA"], "${{ job.workflow_sha }}")
+        self.assertEqual(tooling["env"]["WORKFLOW_REPOSITORY"], "${{ job.workflow_repository }}")
+        self.assertEqual(checkout["with"]["path"], ".nl-respec-tooling")
+        self.assertIn(".github/actions", checkout["with"]["sparse-checkout"].split())
 
     def test_validation_reports_are_artifacts_and_not_committed(self) -> None:
         commit_step = find_step("Commit all results")
