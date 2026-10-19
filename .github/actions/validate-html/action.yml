@@ -1,0 +1,24 @@
+name: Validate HTML
+description: >-
+  HTML-validatie met proof-html (Nu HTML-validator en html-proofer). Gedeeld
+  door build.yml en de PR-controle van docs.geostandaarden.nl, zodat beide
+  dezelfde versie en dezelfde opties gebruiken.
+
+inputs:
+  directory:
+    description: Map met de te valideren HTML, relatief aan de workspace.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate HTML
+      uses: anishathalye/proof-html@f060b7619c2410bd85d970459a60ef431cf47ed5 # v2.2.5
+      with:
+        directory: ${{ inputs.directory }}
+        check_html: true
+        check_css: false
+        disable_external: true
+        check_external_hash: false
+        enforce_https: false
+        ignore_empty_alt: true

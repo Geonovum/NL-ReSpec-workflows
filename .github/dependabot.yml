@@ -3,7 +3,10 @@
 version: 2
 updates:
 
+  # "/" dekt .github/workflows; de gedeelde controles staan in .github/actions.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"
