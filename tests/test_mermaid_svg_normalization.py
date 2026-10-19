@@ -341,5 +341,29 @@ class MermaidVisualWorkflowTest(unittest.TestCase):
             self.assertEqual(normalize(FIXTURE), (head / 'snapshot.html').read_text())
 
 
+    def test_visual_regression_is_skipped_when_base_has_no_document(self):
+        workflow = yaml.safe_load((REPOSITORY_ROOT / '.github/workflows/visual-regression-reusable.yml').read_text())
+        steps = workflow['jobs']['visual-regression']['steps']
+        step = next(step for step in steps if step.get('name') == 'Prepare ReSpec snapshots')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'comparison/template'
+            shutil.copytree(REPOSITORY_ROOT / '.github/mermaid-svg', template / '.github/mermaid-svg',
+                            ignore=shutil.ignore_patterns('node_modules'))
+            (root / 'comparison/base').mkdir(parents=True)
+            (root / 'comparison/head').mkdir(parents=True)
+            output = root / 'output'
+            summary = root / 'summary'
+            subprocess.run(['bash', '-c', step['run']], cwd=root, check=True, capture_output=True,
+                           env={**os.environ, 'GITHUB_WORKSPACE': str(root), 'WORK_DIR': 'comparison',
+                                'SOURCE': 'index.html', 'SNAPSHOT': 'snapshot.html',
+                                'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': str(summary),
+                                'npm_config_offline': 'true'})
+            self.assertIn('skip=true', output.read_text())
+        for name in ('Install comparison tooling', 'Compare screenshots', 'Upload visual regression report'):
+            later = next(step for step in steps if step.get('name') == name)
+            self.assertIn("steps.prepare.outputs.skip != 'true'", later['if'])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -162,6 +162,7 @@ jobs:
           node-version: 24
 
       - name: Prepare ReSpec snapshots
+        id: prepare
         shell: bash
         env:
           SOURCE: ${{ inputs.source }}
@@ -193,6 +194,12 @@ jobs:
 
           if [[ -f "$GITHUB_WORKSPACE/$WORK_DIR/base/$SNAPSHOT" ]]; then
             echo "Using committed base snapshot: $SNAPSHOT"
+          elif [[ ! -f "$GITHUB_WORKSPACE/$WORK_DIR/base/$SOURCE" ]]; then
+            # Bijvoorbeeld een nog lege base-branch: er is niets om mee te vergelijken.
+            echo "::notice title=Geen basis::Base bevat geen $SNAPSHOT of $SOURCE; de visuele vergelijking wordt overgeslagen."
+            echo "Visuele vergelijking overgeslagen: de base bevat geen $SNAPSHOT of $SOURCE." >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           else
             echo "Base snapshot missing; building fallback base snapshot."
             build_snapshot "base" "$WORK_DIR/base"
@@ -201,6 +208,7 @@ jobs:
           build_snapshot "head" "$WORK_DIR/head"
 
       - name: Install comparison tooling
+        if: ${{ steps.prepare.outputs.skip != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -215,6 +223,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Compare screenshots
+        if: ${{ steps.prepare.outputs.skip != 'true' }}
         shell: bash
         env:
           SNAPSHOT: ${{ inputs.snapshot }}
@@ -240,7 +249,7 @@ jobs:
 
       - name: Upload visual regression report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: ${{ always() && steps.prepare.outputs.skip != 'true' }}
         with:
           name: visual-regression-report
           path: ${{ env.WORK_DIR }}/report
