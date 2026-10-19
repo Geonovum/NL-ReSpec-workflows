@@ -1,0 +1,6 @@
+﻿*_log
+.idea
+
+.github/mermaid-svg/node_modules/
+.DS_Store
+__pycache__/

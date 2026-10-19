@@ -1,0 +1,35 @@
+# Alleen voor deze repository.
+# Na het pushen van een versietag (bijv. v1.2.3) wordt de major-tag (v1)
+# naar dezelfde commit verplaatst. Documentrepos gebruiken @v1 en krijgen
+# daarmee automatisch alle niet-brekende updates.
+name: Move major version tag
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  move-major-tag:
+    if: ${{ github.repository == 'Geonovum/NL-ReSpec-workflows' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verplaats major-tag
+        shell: bash
+        env:
+          VERSION_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          MAJOR_TAG="${VERSION_TAG%%.*}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa "$MAJOR_TAG" -m "$MAJOR_TAG -> $VERSION_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$MAJOR_TAG" --force
+
+          echo "$MAJOR_TAG wijst nu naar $VERSION_TAG ($GITHUB_SHA)" >> "$GITHUB_STEP_SUMMARY"
