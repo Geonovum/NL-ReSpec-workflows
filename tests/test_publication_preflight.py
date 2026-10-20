@@ -32,14 +32,50 @@ def find_publish_step(name: str) -> dict | None:
 
 
 class PublicationPreflightTest(unittest.TestCase):
-    def test_local_post_processors_preserve_organisation_processors(self) -> None:
-        config = RESPEC_CONFIG.read_text(encoding="utf-8")
+    def test_template_uses_organisation_post_processors_without_duplicates(self) -> None:
+        script = r"""
+const fs = require("node:fs");
+const vm = require("node:vm");
 
-        self.assertIn(
-            "...(organisationConfig.postProcess ?? [])",
-            config,
-            "Lokale post-processors mogen de Mermaid-processor uit de organisatieconfig niet vervangen.",
+const mermaidProcessor = () => {};
+const localisationProcessor = () => {};
+const context = vm.createContext({
+  // index.html zet ook de documenttitel.
+  document: { title: "" },
+  organisationConfig: {
+    localBiblio: { ORGANISATION: { title: "Organisation" } },
+    postProcess: [mermaidProcessor, localisationProcessor],
+  },
+});
+
+vm.runInContext(fs.readFileSync("js/config.js", "utf8"), context);
+
+const index = fs.readFileSync("index.html", "utf8");
+const mergeScript = [...index.matchAll(/<script class="remove">([\s\S]*?)<\/script>/g)]
+  .map((match) => match[1])
+  .find((source) => source.includes("organisationConfig"));
+
+if (!mergeScript) {
+  throw new Error("De configuratiesamenvoeging ontbreekt in index.html.");
+}
+
+vm.runInContext(mergeScript, context);
+const postProcessors = vm.runInContext("respecConfig.postProcess", context);
+
+if (postProcessors.length !== 2
+    || postProcessors[0] !== mermaidProcessor
+    || postProcessors[1] !== localisationProcessor) {
+  throw new Error("De template moet de postprocessors uitsluitend uit de organisatieconfig overnemen.");
+}
+"""
+        result = subprocess.run(
+            ["node", "-e", script],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
         )
+
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_snapshot_uses_pinned_respec_on_supported_node(self) -> None:
         setup = find_step("Set up Node.js")
