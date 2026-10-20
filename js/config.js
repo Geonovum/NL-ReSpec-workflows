@@ -11,7 +11,7 @@ let respecConfig = {
   //specStatus: "def",              // Vastgestelde versie
   specStatus: "basis",            // Basis Document
 
-  //-- specType is verplicht bij alle andere dan BASIS
+  //-- specType is verplicht!
   //specType: "NO",                 // Norm
   //specType: "ST",                 // Standaard
   //specType: "IM",                 // Informatie Model
@@ -80,11 +80,6 @@ let respecConfig = {
   // dit zorgt voor het 'Doe mee:' onderdeel in het voorblad van de publicatie.
   github: "https://github.com/Geonovum/NL-ReSpec-template",
 
-  postProcess: [
-    ...(organisationConfig.postProcess ?? []),
-    localizeGitHubHeaderLinks
-  ],
-
   // Create PDF and link to file in header (optional):
   // TODO: Change the filename as preferred.
   //alternateFormats: [
@@ -113,16 +108,3 @@ let respecConfig = {
     }
   }
 };
-
-function localizeGitHubHeaderLinks(_config, document) {
-  if (document.documentElement.lang !== "nl") {
-    return;
-  }
-
-  const issueLink = document.querySelector(
-    '.head dl a[href$="/issues/"], .head dl a[href$="/issues"]'
-  );
-  if (issueLink) {
-    issueLink.textContent = "Alle issues";
-  }
-}
