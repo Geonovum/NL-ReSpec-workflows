@@ -18,8 +18,8 @@
       },
       "imev-werkomgeving": {
         "updateAllow": true,
-        "respecBuildUrl": null,
-        "respecVersion": "24.5.2"
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
       },
       "IMROI": {
         "updateAllow": true,
@@ -53,8 +53,8 @@
       },
       "bestuurlijke-gebieden-cm": {
         "updateAllow": true,
-        "respecBuildUrl": "js/modeldesk-respec.js?v=3",
-        "respecVersion": "35.8.0"
+        "respecBuildUrl": "https://cdn.jsdelivr.net/npm/@modeldesk/respec@0.1.0/dist/modeldesk-respec.js",
+        "respecVersion": "37.2.0"
       },
       "imgolf-werkomgeving": {
         "updateAllow": true,
@@ -268,8 +268,8 @@
       },
       "bestuurlijke-gebieden-lm": {
         "updateAllow": true,
-        "respecBuildUrl": "js/modeldesk-respec.js?v=3",
-        "respecVersion": "35.8.0"
+        "respecBuildUrl": "https://cdn.jsdelivr.net/npm/@modeldesk/respec@0.1.0/dist/modeldesk-respec.js",
+        "respecVersion": "37.2.0"
       },
       "vth-dim-vergunning-llm": {
         "updateAllow": true,
@@ -383,7 +383,7 @@
       },
       "CIM-Funderingen": {
         "updateAllow": true,
-        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecBuildUrl": "https://cdn.jsdelivr.net/npm/@modeldesk/respec@0.1.0/dist/modeldesk-respec.js",
         "respecVersion": "37.2.0"
       },
       "mim-begrippenkader": {
@@ -418,8 +418,8 @@
       },
       "inspire-handreiking": {
         "updateAllow": true,
-        "respecBuildUrl": "https://tools.geostandaarden.nl/respec/builds/respec-geonovum.js",
-        "respecVersion": "24.5.2"
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
       },
       "NLDT-Architectuur": {
         "updateAllow": true,
@@ -447,6 +447,31 @@
         "respecVersion": "37.2.0"
       },
       "NLDT-Wijzigingsprotocol": {
+        "updateAllow": true,
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
+      },
+      "Geo-standaarden-beheerplan": {
+        "updateAllow": true,
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
+      },
+      "ldt-citiverse-edic-ra": {
+        "updateAllow": true,
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
+      },
+      "imgeo-3d": {
+        "updateAllow": true,
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
+      },
+      "geobag-berichtenverkeer": {
+        "updateAllow": true,
+        "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
+        "respecVersion": "37.2.0"
+      },
+      "geobag-berichtidentificaties": {
         "updateAllow": true,
         "respecBuildUrl": "https://gitdocumentatie.logius.nl/publicatie/respec/builds/respec-nlgov.js",
         "respecVersion": "37.2.0"
