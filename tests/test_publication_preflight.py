@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -112,6 +113,48 @@ class PublicationPreflightTest(unittest.TestCase):
                 if path.is_file() and path.suffix.lower() in {".html", ".xhtml"}
             )
             self.assertEqual(published_html, ["index.html"])
+
+    @unittest.skipUnless(
+        shutil.which("sed")
+        and "GNU" in subprocess.run(["sed", "--version"], capture_output=True, text=True).stdout,
+        "De publicatiestap gebruikt GNU sed, zoals op de runner.",
+    )
+    def test_latest_pointer_replaces_old_copy_with_redirect_only(self) -> None:
+        step = find_publish_step("Update .htaccess “latest” pointer")
+        self.assertIsNotNone(step)
+        script = (
+            step["run"]
+            .replace("${{ steps.metadata.outputs.folderPath }}", "imev/def-bd-beheerplan-20261013/")
+            .replace("${{ steps.metadata.outputs.shortName }}", "beheerplan")
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            docs = source / "docs.geostandaarden.nl" / "imev"
+            latest = docs / "beheerplan"
+            (latest / "media").mkdir(parents=True)
+            (latest / "index.html").write_text("vorige versie", encoding="utf-8")
+            (latest / "media" / "figuur.png").write_text("png", encoding="utf-8")
+            (latest / ".htaccess").write_text("oude redirect", encoding="utf-8")
+            sibling = docs / "def-bd-beheerplan-20250101"
+            sibling.mkdir()
+            (sibling / "index.html").write_text("oude versie", encoding="utf-8")
+
+            subprocess.run(
+                ["bash", "-euo", "pipefail", "-c", script],
+                cwd=source,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(sorted(path.name for path in latest.iterdir()), [".htaccess"])
+            self.assertIn(
+                "/imev/def-bd-beheerplan-20261013/",
+                (latest / ".htaccess").read_text(encoding="utf-8"),
+            )
+            # Gepubliceerde versies naast de latest-map blijven staan.
+            self.assertEqual((sibling / "index.html").read_text(encoding="utf-8"), "oude versie")
 
     def test_publish_content_keeps_assets_but_excludes_respec_source_fragments(self) -> None:
         step = find_publish_step("Prepare content")
