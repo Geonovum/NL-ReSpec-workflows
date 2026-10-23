@@ -23,6 +23,14 @@ inputs:
     description: Pad voor het rapport.
     required: false
     default: lychee/out.md
+  format:
+    description: Formaat van het rapport (markdown of json).
+    required: false
+    default: markdown
+  job-summary:
+    description: Schrijf het Lychee-rapport ook naar de job summary (alleen bij markdown).
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -37,7 +45,7 @@ runs:
           ${{ inputs.files }}
         fail: true
         failIfEmpty: true
-        format: markdown
-        jobSummary: true
+        format: ${{ inputs.format }}
+        jobSummary: ${{ inputs.job-summary }}
         output: ${{ inputs.output }}
         workingDirectory: ${{ inputs.working-directory }}

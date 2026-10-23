@@ -16,13 +16,33 @@ README van [NL-ReSpec-template](https://github.com/Geonovum/NL-ReSpec-template).
 | `.github/workflows/build.yml` | Snapshot, Mermaid-normalisatie, PDF en controles (HTML, WCAG, links) |
 | `.github/workflows/publish.yml` | Publicatie naar docs.geostandaarden.nl |
 | `.github/workflows/visual-regression-reusable.yml` | Visuele vergelijking van snapshots |
-| `.github/workflows/normalize-mermaid-svg.mjs`, `pdf.js`, `.github/mermaid-svg/` | Hulpbestanden die `build.yml` zelf ophaalt |
+| `.github/workflows/normalize-mermaid-svg.mjs`, `pdf.js`, `controlerapport.mjs`, `.github/mermaid-svg/` | Hulpbestanden die `build.yml` zelf ophaalt |
 | `.github/actions/validate-html`, `.github/actions/check-links` | HTML- en linkcontrole, gedeeld door `build.yml` en de PR-controle van docs.geostandaarden.nl; versies staan alleen hier |
 | `document-repo/.github/workflows/` | De aanroepende workflows (`main.yml`, `visual-regression.yml`) die naar documentrepos worden uitgerold |
 | `.github/workflows/update-workflows.yml`, `scripts/`, `.github/repos.json` | Uitrol naar documentrepos |
 | `.github/workflows/release-tag.yml` | Verplaatst de major-tag (`v1`) bij een nieuwe versietag |
 | `.github/workflows/template-regression.yml`, `tests/` | Regressietests van deze workflows |
 | `index.html`, `js/config.js`, `*.md`, `media/`, `snapshot.html` | Voorbeelddocument waarop de regressietests draaien |
+
+## Controlerapport
+
+De controles in `build.yml` (ReSpec, HTML, WCAG, links en de controle op
+raw.githubusercontent.com-links) lopen allemaal door, ook als er een
+bevinding is. De stap **Controlerapport** zet daarna alle bevindingen in één
+overzicht in de samenvatting van de run en laat de build pas daar falen als
+een blokkerende controle is afgekeurd. Zo ziet een auteur alle bevindingen
+in één run.
+
+| Controle | Blokkeert publicatie |
+| --- | --- |
+| HTML (proof-html) | ja |
+| Links (Lychee) | ja |
+| Voorblad (alleen als `scripts/check-localized-header-links.mjs` bestaat) | ja |
+| raw.githubusercontent.com-links | alleen bij een release |
+| ReSpec-fouten en -waarschuwingen | nee |
+| WCAG 2.2 (axe) | nee |
+
+Het rapport en de ruwe uitvoer staan ook in het artifact `validation-reports`.
 
 ## Gebruik in een documentrepository
 

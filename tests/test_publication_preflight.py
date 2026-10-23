@@ -155,21 +155,28 @@ class PublicationPreflightTest(unittest.TestCase):
                     ).exists()
                 )
 
-    def test_html_validation_is_blocking_for_the_publication_tree(self) -> None:
+    def test_html_validation_checks_the_publication_tree_and_keeps_its_log(self) -> None:
         step = find_step("Validate publication HTML")
         self.assertIsNotNone(step, "De build moet het publicatiepakket als HTML valideren.")
 
-        self.assertNotIn("continue-on-error", step)
+        # Blokkerend via het controlerapport, zodat de overige controles ook draaien.
+        self.assertIs(step.get("continue-on-error"), True)
         self.assertNotIn("if", step)
         self.assertEqual(step["uses"], "./.nl-respec-tooling/.github/actions/validate-html")
         self.assertEqual(step["with"]["directory"], "publication-validation")
+        self.assertEqual(step["with"]["log"], "${{ runner.temp }}/nl-respec-validation/html.log")
 
-    def test_lychee_checks_only_generated_index_and_fails_on_errors(self) -> None:
+    def test_lychee_checks_only_generated_index_and_reports_json(self) -> None:
         step = find_step("Validate publication links")
         self.assertIsNotNone(step, "De build moet publicatielinks met Lychee valideren.")
 
-        self.assertNotIn("continue-on-error", step)
+        self.assertIs(step.get("continue-on-error"), True)
         self.assertEqual(step.get("if"), "${{ !cancelled() }}")
+        self.assertEqual(step["with"]["format"], "json")
+        self.assertEqual(step["with"]["job-summary"], "false")
+        self.assertEqual(
+            step["with"]["output"], "${{ runner.temp }}/nl-respec-validation/link-check.json"
+        )
         self.assertEqual(step["uses"], "./.nl-respec-tooling/.github/actions/check-links")
         self.assertEqual(step["with"]["files"], "'./index.html'")
         self.assertEqual(step["with"]["root-dir"], "${{ github.workspace }}/publication-validation")
@@ -200,30 +207,47 @@ class PublicationPreflightTest(unittest.TestCase):
             "${{ runner.temp }}/nl-respec-validation/wcag-report.json",
             artifact_step["with"]["path"],
         )
-        self.assertIn(
-            "${{ runner.temp }}/nl-respec-validation/link-check.txt",
-            artifact_step["with"]["path"],
-        )
+        for report in ("controlerapport.md", "link-check.json", "html.log", "respec.log"):
+            self.assertIn(
+                f"${{{{ runner.temp }}}}/nl-respec-validation/{report}",
+                artifact_step["with"]["path"],
+            )
 
         cleanup_step = find_step("Remove validation working directory")
         self.assertIsNotNone(cleanup_step)
         self.assertEqual(cleanup_step.get("if"), "${{ always() }}")
 
-    def test_summary_always_reports_whether_the_commit_is_ready_for_publication(self) -> None:
-        html_step = find_step("Validate publication HTML")
-        link_step = find_step("Validate publication links")
-        summary_step = find_step("Summarize publication preflight")
+    def test_report_collects_all_check_outcomes_before_writeback(self) -> None:
+        report_step = find_step("Controlerapport")
+        self.assertIsNotNone(report_step, "De build moet alle controles in één rapport bundelen.")
+        self.assertEqual(report_step.get("if"), "${{ !cancelled() }}")
+        self.assertNotIn("continue-on-error", report_step)
+        self.assertIn(".github/workflows/controlerapport.mjs", report_step["run"])
+        self.assertEqual(report_step["env"]["JOB_STATUS"], "${{ job.status }}")
 
-        self.assertIsNotNone(html_step)
-        self.assertIsNotNone(link_step)
-        self.assertIsNotNone(summary_step, "De build moet de publicatiegereedheid samenvatten.")
-        self.assertEqual(html_step.get("id"), "publication-html")
-        self.assertEqual(link_step.get("id"), "publication-links")
-        self.assertEqual(summary_step.get("if"), "${{ always() }}")
-        self.assertIn("GITHUB_STEP_SUMMARY", summary_step["run"])
-        self.assertIn("Publicatiegereed", summary_step["run"])
-        self.assertIn("${{ job.status }}", summary_step["run"])
-        self.assertIn('BUILD_STATUS" == "success', summary_step["run"])
+        steps = build_steps()
+        ids = {step.get("id") for step in steps}
+        for variable, value in report_step["env"].items():
+            if variable.startswith("OUTCOME_"):
+                step_id = value.removeprefix("${{ steps.").removesuffix(".outcome }}")
+                self.assertIn(step_id, ids, f"{variable} verwijst naar een onbekende stap.")
+
+        names = [step.get("name") for step in steps]
+        self.assertLess(names.index("Validate publication links"), names.index("Controlerapport"))
+        self.assertLess(names.index("Controlerapport"), names.index("Commit all results"))
+
+    def test_checks_continue_so_the_report_shows_all_findings(self) -> None:
+        for name in (
+            "Blokkeer raw.githubusercontent.com-links in bronbestand",
+            "Check localized header links",
+            "Validate publication HTML",
+            "Validate publication links",
+        ):
+            with self.subTest(step=name):
+                self.assertIs(find_step(name).get("continue-on-error"), True)
+
+        # Zonder snapshot valt er niets te controleren: die stap blijft direct falen.
+        self.assertNotIn("continue-on-error", find_step("Generate HTML snapshot"))
 
 
 if __name__ == "__main__":
