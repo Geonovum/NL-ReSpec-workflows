@@ -26,22 +26,26 @@ function readJson(file) {
   return JSON.parse(text);
 }
 
-// Kopje van de sectie waarin een regel van de gegenereerde HTML valt, zodat
-// een auteur de plek in de bron terugvindt.
+// Kopje van de sectie waarin een positie van de gegenereerde HTML valt, zodat
+// een auteur de plek in de bron terugvindt. ReSpec zet soms meerdere elementen
+// op één regel; de kolom geeft dan de doorslag als de tool die meelevert.
 export function headingIndex(html) {
   const headings = [];
   const pattern = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
   for (const match of html.matchAll(pattern)) {
-    const line = html.slice(0, match.index).split("\n").length;
+    const before = html.slice(0, match.index);
+    const line = before.split("\n").length;
+    const column = match.index - before.lastIndexOf("\n");
     const text = match[2].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-    if (text) headings.push({ line, text });
+    if (text) headings.push({ line, column, text });
   }
-  return line => headings.findLast(heading => heading.line <= line)?.text ?? null;
+  return (line, column = Infinity) => headings.findLast(heading =>
+    heading.line < line || (heading.line === line && heading.column <= column))?.text ?? null;
 }
 
-function locate(headingFor, line) {
+function locate(headingFor, line, column) {
   if (!line) return null;
-  const heading = headingFor?.(line);
+  const heading = headingFor?.(line, column);
   return heading ? `sectie "${heading}" (regel ${line} van snapshot.html)` : `regel ${line} van snapshot.html`;
 }
 
@@ -73,12 +77,12 @@ export function parseProofHtml(log, headingFor) {
   const seen = new Set();
   const lines = stripAnsi(log).split("\n");
   for (const line of lines) {
-    const match = line.match(/^"file:[^"]*":(\d+)\.\d+-\d+\.\d+: (error|warning|info warning): (.*)$/);
+    const match = line.match(/^"file:[^"]*":(\d+)\.(\d+)-\d+\.\d+: (error|warning|info warning): (.*)$/);
     if (match) {
       findings.push({
         severity: "error",
-        message: match[3].trim(),
-        location: locate(headingFor, Number(match[1])),
+        message: match[4].trim(),
+        location: locate(headingFor, Number(match[1]), Number(match[2])),
       });
     }
   }
@@ -122,7 +126,7 @@ export function parseLychee(report, rootDir, headingFor) {
       findings.push({
         severity: "error",
         message: `${status}: ${url}`,
-        location: locate(headingFor, entry.span?.line),
+        location: locate(headingFor, entry.span?.line, entry.span?.column),
       });
     }
   }

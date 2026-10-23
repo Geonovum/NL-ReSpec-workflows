@@ -104,6 +104,24 @@ class ControlerapportTest(unittest.TestCase):
         self.assertIn("Images: internal image media/missing.png does not exist", report)
         self.assertIn("::error title=HTML::", result.stdout)
 
+    def test_column_decides_the_section_when_respec_puts_a_heading_on_the_same_line(self) -> None:
+        index = self.report.workspace / "publication-validation" / "index.html"
+        index.write_text(
+            '<h2>Eerste</h2>\n<div id="a"></div><section><h3>Tweede</h3><p id="a"></p></section>\n',
+            encoding="utf-8",
+        )
+        self.report.write(
+            "html.log",
+            '"file:/github/workspace/publication-validation/index.html":2.1-2.13: error: Eerste fout.\n'
+            '"file:/github/workspace/publication-validation/index.html":2.50-2.60: error: Tweede fout.\n',
+        )
+
+        self.report.run(OUTCOME_HTML="failure")
+
+        report = self.report.report()
+        self.assertIn("- **Fout**: Eerste fout.\n  - sectie \"Eerste\"", report)
+        self.assertIn("- **Fout**: Tweede fout.\n  - sectie \"Tweede\"", report)
+
     def test_all_findings_are_reported_in_one_run(self) -> None:
         self.report.copy_fixture("html.log")
         self.report.copy_fixture("respec.log")
