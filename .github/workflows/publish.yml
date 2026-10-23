@@ -218,6 +218,10 @@ jobs:
 
           mkdir -p "$REPO_DIR/$LINK_DIR"
 
+          # De map bevat alleen de redirect. Bestanden uit de tijd dat de nieuwste
+          # versie hier als kopie stond, zouden anders naast de redirect blijven staan.
+          find "$REPO_DIR/$LINK_DIR" -mindepth 1 -maxdepth 1 ! -name .htaccess -print -exec rm -rf {} +
+
           # .htaccess updaten: redirect root + subpaden naar nieuwste versie-map
           cat > "$REPO_DIR/$LINK_DIR/.htaccess" <<'EOF'
           RewriteEngine On
