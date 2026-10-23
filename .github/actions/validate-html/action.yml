@@ -8,17 +8,35 @@ inputs:
   directory:
     description: Map met de te valideren HTML, relatief aan de workspace.
     required: true
+  log:
+    description: Optioneel pad waar de uitvoer van de controle ook naartoe wordt geschreven.
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
+    # Hetzelfde image als anishathalye/proof-html v2.2.5, maar via docker run
+    # zodat de uitvoer bewaard kan worden voor het controlerapport. Bij een
+    # nieuwe versie: tag en digest samen bijwerken.
     - name: Validate HTML
-      uses: anishathalye/proof-html@f060b7619c2410bd85d970459a60ef431cf47ed5 # v2.2.5
-      with:
-        directory: ${{ inputs.directory }}
-        check_html: true
-        check_css: false
-        disable_external: true
-        check_external_hash: false
-        enforce_https: false
-        ignore_empty_alt: true
+      shell: bash
+      env:
+        PROOF_HTML_IMAGE: anishathalye/proof-html:2.2.5@sha256:4659086c07e94aaa9e93d7793fed323ffb575839db37b5bff3e8a59b2ec83c97
+        LOG_FILE: ${{ inputs.log }}
+      run: |
+        set -euo pipefail
+        LOG_FILE="${LOG_FILE:-$RUNNER_TEMP/validate-html.log}"
+        mkdir -p "$(dirname "$LOG_FILE")"
+
+        docker run --rm \
+          --volume "$GITHUB_WORKSPACE:/github/workspace" \
+          --workdir /github/workspace \
+          --env INPUT_DIRECTORY="${{ inputs.directory }}" \
+          --env INPUT_CHECK_HTML=true \
+          --env INPUT_CHECK_CSS=false \
+          --env INPUT_DISABLE_EXTERNAL=true \
+          --env INPUT_CHECK_EXTERNAL_HASH=false \
+          --env INPUT_ENFORCE_HTTPS=false \
+          --env INPUT_IGNORE_EMPTY_ALT=true \
+          "$PROOF_HTML_IMAGE" 2>&1 | tee "$LOG_FILE"

@@ -51,7 +51,7 @@ jobs:
             .github/workflows
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
 
@@ -89,12 +89,15 @@ jobs:
         run: |
           mkdir -p static "$RUNNER_TEMP/nl-respec-validation"
 
+      # De controles hieronder lopen door bij bevindingen; de stap
+      # "Controlerapport" bundelt alles en laat de build pas daar falen.
       - name: Blokkeer raw.githubusercontent.com-links in bronbestand
+        id: raw-links
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          MATCH_FILE="$(mktemp)"
-          trap 'rm -f "$MATCH_FILE"' EXIT
+          MATCH_FILE="$RUNNER_TEMP/nl-respec-validation/raw-links.txt"
 
           GREP_STATUS=0
           grep -nE 'raw\.githubusercontent\.com' index.html > "$MATCH_FILE" || GREP_STATUS=$?
@@ -118,7 +121,12 @@ jobs:
           fi
 
       - name: Generate HTML snapshot
-        run: npx --yes respec@37.3.2 --localhost --disable-sandbox --timeout 120 --src index.html --out snapshot.html
+        id: respec
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes respec@37.3.2 --localhost --disable-sandbox --timeout 120 --src index.html --out snapshot.html \
+            2>&1 | tee "$RUNNER_TEMP/nl-respec-validation/respec.log"
 
       - name: Normaliseer mermaid-diagrammen in snapshot
         run: |
@@ -127,10 +135,14 @@ jobs:
           node "$TOOLING_DIR/.github/workflows/normalize-mermaid-svg.mjs" snapshot.html
 
       - name: Check localized header links
+        id: header-links
+        if: ${{ hashFiles('scripts/check-localized-header-links.mjs') != '' }}
+        continue-on-error: true
+        shell: bash
         run: |
-          if [ -f scripts/check-localized-header-links.mjs ]; then
-            node scripts/check-localized-header-links.mjs snapshot.html
-          fi
+          set -euo pipefail
+          node scripts/check-localized-header-links.mjs snapshot.html \
+            2>&1 | tee "$RUNNER_TEMP/nl-respec-validation/header-links.log"
 
       - name: Prepare publication for validation
         run: |
@@ -155,9 +167,11 @@ jobs:
       # docs.geostandaarden.nl; zie .github/actions/.
       - name: Validate publication HTML
         id: publication-html
+        continue-on-error: true
         uses: ./.nl-respec-tooling/.github/actions/validate-html
         with:
           directory: publication-validation
+          log: ${{ runner.temp }}/nl-respec-validation/html.log
 
       - name: Check for alternateFormats via Node
         id: config
@@ -225,6 +239,7 @@ jobs:
           echo "chromedriver_bin=$CHROMEDRIVER_BIN" >> "$GITHUB_OUTPUT"
 
       - name: Run WCAG 2.2 check
+        id: wcag
         run: |
           for i in {1..30}; do
             if curl -sf http://localhost:8080/snapshot.html > /dev/null; then
@@ -277,36 +292,31 @@ jobs:
       - name: Validate publication links
         id: publication-links
         if: ${{ !cancelled() }}
+        continue-on-error: true
         uses: ./.nl-respec-tooling/.github/actions/check-links
         with:
           files: "'./index.html'"
           root-dir: ${{ github.workspace }}/publication-validation
           working-directory: ${{ github.workspace }}/publication-validation
-          output: ${{ runner.temp }}/nl-respec-validation/link-check.txt
+          output: ${{ runner.temp }}/nl-respec-validation/link-check.json
+          format: json
+          job-summary: "false"
 
-      - name: Summarize publication preflight
-        if: ${{ always() }}
-        run: |
-          HTML_OUTCOME="${{ steps.publication-html.outcome }}"
-          LINK_OUTCOME="${{ steps.publication-links.outcome }}"
-          BUILD_STATUS="${{ job.status }}"
-
-          {
-            echo "## Publicatiepreflight"
-            echo
-            echo "| Controle | Resultaat |"
-            echo "| --- | --- |"
-            echo "| HTML | $HTML_OUTCOME |"
-            echo "| Links | $LINK_OUTCOME |"
-            echo "| Build | $BUILD_STATUS |"
-            echo
-
-            if [[ "$BUILD_STATUS" == "success" && "$HTML_OUTCOME" == "success" && "$LINK_OUTCOME" == "success" ]]; then
-              echo "✅ **Publicatiegereed: ja**"
-            else
-              echo "❌ **Publicatiegereed: nee**"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+      # Draait vóór het terugschrijven: bij blokkerende bevindingen wordt de
+      # snapshot niet gecommit, net als toen de controles direct faalden.
+      - name: Controlerapport
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME_RAW_LINKS: ${{ steps.raw-links.outcome }}
+          OUTCOME_RESPEC: ${{ steps.respec.outcome }}
+          OUTCOME_HEADER_LINKS: ${{ steps.header-links.outcome }}
+          OUTCOME_HTML: ${{ steps.publication-html.outcome }}
+          OUTCOME_WCAG: ${{ steps.wcag.outcome }}
+          OUTCOME_LINKS: ${{ steps.publication-links.outcome }}
+          JOB_STATUS: ${{ job.status }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKSPACE: ${{ github.workspace }}
+        run: node "$TOOLING_DIR/.github/workflows/controlerapport.mjs" "$RUNNER_TEMP/nl-respec-validation"
 
       - name: Stop snapshot HTTP server
         if: always()
@@ -347,7 +357,7 @@ jobs:
           git push origin HEAD:"$TARGET_BRANCH"
 
       - name: Upload snapshot artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: snapshot
           path: |
@@ -359,10 +369,13 @@ jobs:
 
       - name: Upload validation reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: validation-reports
           path: |
+            ${{ runner.temp }}/nl-respec-validation/controlerapport.md
             ${{ runner.temp }}/nl-respec-validation/wcag-report.json
-            ${{ runner.temp }}/nl-respec-validation/link-check.txt
+            ${{ runner.temp }}/nl-respec-validation/link-check.json
+            ${{ runner.temp }}/nl-respec-validation/html.log
+            ${{ runner.temp }}/nl-respec-validation/respec.log
           if-no-files-found: warn

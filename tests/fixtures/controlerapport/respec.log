@@ -1,0 +1,11 @@
+[43m[30m[1m[WARNING][22m[39m[49m [33mURI config option expected previousMaturity to be in config. Removing version link from document header.[39m
+[43m[30m[1m[WARNING][22m[39m[49m [33mURI config option expected previousPublishDate to be in config. Removing version link from document header.[39m
+[43m[30m[1m[WARNING][22m[39m[49m [33mFound linkless [4m<a>[24m element with text "onbekendeterm" but no matching [4m<dfn>[24m[39m
+  [1m Count:[22m 1
+  [1mPlugin:[22m core/link-to-dfn
+  [1m  Hint:[22m Add a matching [4m<dfn>[24m element, use [[4mdata-cite[24m]([34m[2m[4mhttps://respec.org/docs/#data-cite[24m[22m[39m) to link to an external definition, or enable [[4mxref[24m]([34m[2m[4mhttps://respec.org/docs/#xref[24m[22m[39m) for automatic cross-spec linking.
+[41m[37m[1m[ERROR][22m[39m[49m [31mReference "[BESTAATNIET]" not found.[39m
+  [1m Count:[22m 1
+  [1mPlugin:[22m core/render-biblio
+  [1m  Hint:[22m Search for ["BESTAATNIET"]([34m[2m[4mhttps://www.specref.org?q=BESTAATNIET[24m[22m[39m) on Specref to see if it exists or if it's misspelled.
+[41m[37m[1m[ERROR][22m[39m[49m [31mFailed to generate figure[39m

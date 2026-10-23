@@ -20,16 +20,23 @@ def only_step(name: str) -> dict:
 
 class SharedValidationTest(unittest.TestCase):
     def test_validate_html_keeps_the_build_options(self) -> None:
-        step = only_step("validate-html")
+        step = action("validate-html")["runs"]["steps"][0]
+        image = step["env"]["PROOF_HTML_IMAGE"]
 
-        self.assertTrue(step["uses"].startswith("anishathalye/proof-html@"))
-        self.assertEqual(step["with"]["directory"], "${{ inputs.directory }}")
-        self.assertIs(step["with"]["check_html"], True)
-        self.assertIs(step["with"]["check_css"], False)
-        self.assertIs(step["with"]["disable_external"], True)
-        self.assertIs(step["with"]["check_external_hash"], False)
-        self.assertIs(step["with"]["enforce_https"], False)
-        self.assertIs(step["with"]["ignore_empty_alt"], True)
+        self.assertRegex(image, r"^anishathalye/proof-html:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$")
+        self.assertIn('INPUT_DIRECTORY="${{ inputs.directory }}"', step["run"])
+        for option in (
+            "INPUT_CHECK_HTML=true",
+            "INPUT_CHECK_CSS=false",
+            "INPUT_DISABLE_EXTERNAL=true",
+            "INPUT_CHECK_EXTERNAL_HASH=false",
+            "INPUT_ENFORCE_HTTPS=false",
+            "INPUT_IGNORE_EMPTY_ALT=true",
+        ):
+            self.assertIn(option, step["run"])
+        # De uitvoer gaat naar de log én naar het bestand voor het controlerapport.
+        self.assertIn('| tee "$LOG_FILE"', step["run"])
+        self.assertIn("pipefail", step["run"])
 
     def test_check_links_is_offline_and_blocking(self) -> None:
         step = only_step("check-links")
@@ -41,6 +48,10 @@ class SharedValidationTest(unittest.TestCase):
         self.assertIn("${{ inputs.files }}", args)
         self.assertIs(step["with"]["fail"], True)
         self.assertIs(step["with"]["failIfEmpty"], True)
+        # docs.geostandaarden.nl houdt zonder extra inputs het Markdown-rapport.
+        inputs = action("check-links")["inputs"]
+        self.assertEqual(inputs["format"]["default"], "markdown")
+        self.assertEqual(inputs["job-summary"]["default"], "true")
 
     def test_validation_tools_are_only_pinned_in_shared_actions(self) -> None:
         # Eén plek voor versies: build.yml en docs.geostandaarden.nl gebruiken deze acties.
@@ -48,6 +59,7 @@ class SharedValidationTest(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             with self.subTest(file=path.name):
                 self.assertNotIn("anishathalye/proof-html", text)
+                self.assertNotIn("docker run", text)
                 self.assertNotIn("lycheeverse/lychee-action", text)
 
     def test_dependabot_scans_shared_actions(self) -> None:
