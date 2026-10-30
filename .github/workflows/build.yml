@@ -55,9 +55,13 @@ jobs:
         with:
           node-version: 24
 
+      # Alleen de standaardbranch krijgt de gegenereerde documenten teruggeschreven.
+      # Op andere branches (ook Dependabot) draaien alle controles wel, maar zou
+      # een bot-commit tot mergeconflicten leiden; de snapshot staat daar in het
+      # workflow-artifact "snapshot".
       - name: Bepaal branch voor terugschrijven
         id: commit-target
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && github.ref_name == github.event.repository.default_branch }}
         shell: bash
         run: |
           set -euo pipefail
