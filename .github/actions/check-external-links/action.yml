@@ -1,0 +1,78 @@
+name: Check external links
+description: >-
+  Online controle van externe links (http/https) met Lychee. Aanvulling op
+  check-links, dat offline draait en externe links overslaat. Standaard
+  waarschuwend: tijdelijk onbereikbare sites mogen een build niet blokkeren.
+  Gedeeld door build.yml en de PR-controle van docs.geostandaarden.nl.
+
+inputs:
+  files:
+    description: De te controleren bestanden, als Lychee-argumenten (gequote).
+    required: true
+  working-directory:
+    description: Map waarin Lychee draait.
+    required: false
+    default: "."
+  output:
+    description: Pad voor het rapport.
+    required: false
+    default: lychee/external.md
+  exclude:
+    description: >-
+      Extra uit te sluiten URL's, als Lychee-argumenten, bijv.
+      "--exclude '^https://example\.org/'". docs.geostandaarden.nl is altijd
+      uitgesloten: die links controleert check-links lokaal, en "Deze versie"
+      bestaat pas na publicatie.
+    required: false
+    default: ""
+  fail:
+    description: '"true" laat de stap falen bij dode links; standaard alleen een waarschuwing.'
+    required: false
+    default: "false"
+
+outputs:
+  broken:
+    description: '"true" als Lychee dode of onbereikbare externe links vond.'
+    value: ${{ steps.lychee.outputs.exit_code != '0' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check external links
+      id: lychee
+      uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+      with:
+        args: >-
+          --scheme https
+          --scheme http
+          --exclude '^https?://docs\.geostandaarden\.nl'
+          --exclude-loopback
+          --max-retries 3
+          --retry-wait-time 5
+          --timeout 30
+          --max-concurrency 8
+          --accept '100..=103,200..=299,403,429'
+          ${{ inputs.exclude }}
+          ${{ inputs.files }}
+        fail: false
+        failIfEmpty: false
+        format: markdown
+        jobSummary: true
+        output: ${{ inputs.output }}
+        workingDirectory: ${{ inputs.working-directory }}
+
+    - name: Report external link result
+      shell: bash
+      env:
+        EXIT_CODE: ${{ steps.lychee.outputs.exit_code }}
+        FAIL: ${{ inputs.fail }}
+        REPORT: ${{ inputs.output }}
+      run: |
+        if [[ "$EXIT_CODE" == "0" ]]; then
+          echo "Geen dode externe links gevonden."
+          exit 0
+        fi
+        echo "::warning title=Dode externe links::Lychee vond onbereikbare externe links (exitcode $EXIT_CODE). Zie de job summary of $REPORT."
+        if [[ "$FAIL" == "true" ]]; then
+          exit 1
+        fi
