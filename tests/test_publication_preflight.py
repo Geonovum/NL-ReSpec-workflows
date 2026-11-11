@@ -178,6 +178,29 @@ class PublicationPreflightTest(unittest.TestCase):
             "${{ github.workspace }}/publication-validation",
         )
 
+    def test_external_links_are_checked_without_blocking_publication(self) -> None:
+        step = find_step("Check external publication links")
+        self.assertIsNotNone(step, "De build moet externe links online controleren.")
+
+        self.assertNotIn("continue-on-error", step)
+        self.assertEqual(step.get("id"), "external-links")
+        self.assertEqual(step.get("if"), "${{ !cancelled() }}")
+        self.assertEqual(step["uses"], "./.nl-respec-tooling/.github/actions/check-external-links")
+        self.assertEqual(step["with"]["files"], "'./index.html'")
+        self.assertNotIn("fail", step["with"])
+
+        summary = find_step("Summarize publication preflight")["run"]
+        self.assertIn("steps.external-links.outputs.broken", summary)
+        # Externe links tellen niet mee voor Publicatiegereed.
+        ready_line = next(line for line in summary.splitlines() if 'BUILD_STATUS" == "success' in line)
+        self.assertNotIn("EXTERNAL_BROKEN", ready_line)
+
+        artifact = find_step("Upload validation reports")
+        self.assertIn(
+            "${{ runner.temp }}/nl-respec-validation/external-link-check.txt",
+            artifact["with"]["path"],
+        )
+
     def test_tooling_checkout_contains_shared_actions_at_workflow_commit(self) -> None:
         tooling = find_step("Determine tooling ref")
         checkout = find_step("Checkout workflow tooling")
