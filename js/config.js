@@ -11,7 +11,7 @@ let respecConfig = {
   //specStatus: "def",              // Vastgestelde versie
   specStatus: "ld",            // Levend document
 
-  //-- specType is verplicht bij alle andere dan BASIS
+  //-- specType is verplicht
   //specType: "NO",                 // Norm
   //specType: "ST",                 // Standaard
   //specType: "IM",                 // Informatie Model
