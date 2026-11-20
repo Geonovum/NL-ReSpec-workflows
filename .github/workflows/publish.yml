@@ -112,7 +112,7 @@ jobs:
           fi
 
           # 4. Valideer specStatus tegen toegestane waarden
-          ALLOWED_STATUS=(wv cv vv def ld basis)
+          ALLOWED_STATUS=(wv cv vv def ld)
           if [[ ! " ${ALLOWED_STATUS[*]} " =~ " $SPEC_STATUS " ]]; then
             echo "::error title=Invalid specStatus::$SPEC_STATUS is geen geldige specStatus. Mogelijke waarden: ${ALLOWED_STATUS[*]}"
             exit 1
