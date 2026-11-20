@@ -31,6 +31,25 @@ class ReleaseWritebackPolicyTest(unittest.TestCase):
             "Alleen een push mag een bronbranch voor terugschrijven selecteren.",
         )
 
+    def test_only_the_default_branch_gets_generated_files_written_back(self) -> None:
+        workflow = BUILD_WORKFLOW.read_text(encoding="utf-8")
+        commit_target = step_block(workflow, "Bepaal branch voor terugschrijven")
+        condition = re.search(r"^\s+if:\s*(.+)$", commit_target, re.MULTILINE)
+
+        self.assertIsNotNone(condition, "De terugschrijfstap moet een branchvoorwaarde hebben.")
+        self.assertIn(
+            "github.ref_name == github.event.repository.default_branch",
+            condition.group(1),
+            "Alleen een push naar de standaardbranch mag gegenereerde documenten terugschrijven.",
+        )
+
+    def test_snapshot_artifact_is_uploaded_for_every_branch(self) -> None:
+        workflow = BUILD_WORKFLOW.read_text(encoding="utf-8")
+        upload = step_block(workflow, "Upload snapshot artifact")
+
+        self.assertNotRegex(upload, r"^\s+if:", "Het snapshot-artifact moet op elke branch beschikbaar blijven.")
+        self.assertIn("snapshot.html", upload)
+
 
 if __name__ == "__main__":
     unittest.main()
