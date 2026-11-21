@@ -42,6 +42,21 @@ class SharedValidationTest(unittest.TestCase):
         self.assertIs(step["with"]["fail"], True)
         self.assertIs(step["with"]["failIfEmpty"], True)
 
+    def test_check_external_links_is_online_and_warns_by_default(self) -> None:
+        definition = action("check-external-links")
+        step = only_step("check-external-links")
+        args = step["with"]["args"]
+
+        # Zelfde Lychee-versie als de offline controle.
+        self.assertEqual(step["uses"], only_step("check-links")["uses"])
+        self.assertNotIn("--offline", args)
+        self.assertIn("--scheme https", args)
+        self.assertIn("--exclude '^https?://docs\.geostandaarden\.nl'", args)
+        self.assertIn("${{ inputs.files }}", args)
+        self.assertIs(step["with"]["fail"], False)
+        self.assertEqual(definition["inputs"]["fail"]["default"], "false")
+        self.assertIn("broken", definition["outputs"])
+
     def test_validation_tools_are_only_pinned_in_shared_actions(self) -> None:
         # Eén plek voor versies: build.yml en docs.geostandaarden.nl gebruiken deze acties.
         for path in (GITHUB_DIR / "workflows").glob("*.yml"):

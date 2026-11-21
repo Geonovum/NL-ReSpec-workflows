@@ -284,11 +284,24 @@ jobs:
           working-directory: ${{ github.workspace }}/publication-validation
           output: ${{ runner.temp }}/nl-respec-validation/link-check.txt
 
+      # Waarschuwend: dode externe links blokkeren de publicatie niet, maar staan
+      # als waarschuwing en in de samenvatting. De offline controle hierboven
+      # slaat externe links over.
+      - name: Check external publication links
+        id: external-links
+        if: ${{ !cancelled() }}
+        uses: ./.nl-respec-tooling/.github/actions/check-external-links
+        with:
+          files: "'./index.html'"
+          working-directory: ${{ github.workspace }}/publication-validation
+          output: ${{ runner.temp }}/nl-respec-validation/external-link-check.txt
+
       - name: Summarize publication preflight
         if: ${{ always() }}
         run: |
           HTML_OUTCOME="${{ steps.publication-html.outcome }}"
           LINK_OUTCOME="${{ steps.publication-links.outcome }}"
+          EXTERNAL_BROKEN="${{ steps.external-links.outputs.broken }}"
           BUILD_STATUS="${{ job.status }}"
 
           {
@@ -298,6 +311,13 @@ jobs:
             echo "| --- | --- |"
             echo "| HTML | $HTML_OUTCOME |"
             echo "| Links | $LINK_OUTCOME |"
+            if [[ "$EXTERNAL_BROKEN" == "true" ]]; then
+              echo "| Externe links | ⚠️ dode links gevonden (blokkeert niet) |"
+            elif [[ "$EXTERNAL_BROKEN" == "false" ]]; then
+              echo "| Externe links | success |"
+            else
+              echo "| Externe links | niet uitgevoerd |"
+            fi
             echo "| Build | $BUILD_STATUS |"
             echo
 
@@ -365,4 +385,5 @@ jobs:
           path: |
             ${{ runner.temp }}/nl-respec-validation/wcag-report.json
             ${{ runner.temp }}/nl-respec-validation/link-check.txt
+            ${{ runner.temp }}/nl-respec-validation/external-link-check.txt
           if-no-files-found: warn
