@@ -218,6 +218,13 @@ jobs:
 
           mkdir -p "$REPO_DIR/$LINK_DIR"
 
+          # Pin-guard: sla de update over als de bestaande .htaccess expliciet is gepind
+          # (bijv. juridische verwijzing vanuit een regeling, zoals BRO SAD/SLD op wetten.nl).
+          if [ -f "$REPO_DIR/$LINK_DIR/.htaccess" ] && grep -q 'GEPINNED-do-not-overwrite' "$REPO_DIR/$LINK_DIR/.htaccess"; then
+            echo "::notice title=.htaccess gepinned::$REPO_DIR/$LINK_DIR/.htaccess is gepind en wordt niet overschreven."
+            exit 0
+          fi
+
           # .htaccess updaten: redirect root + subpaden naar nieuwste versie-map
           cat > "$REPO_DIR/$LINK_DIR/.htaccess" <<'EOF'
           RewriteEngine On
